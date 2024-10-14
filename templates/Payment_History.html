@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment History</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        footer {
+            background-color: #333; /* Background color */
+            color: white; /* Text color */
+            text-align: center; /* Center the text */
+            padding: 20px; /* Padding */
+            margin-top: auto; /* Push the footer to the bottom */
+        }
+
+        @media (max-width: 600px) {
+            footer {
+                padding: 15px; /* Smaller padding for small screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4 mb-4">Payment History</h1>
+
+        <!-- Form to filter by month -->
+        <form action="{{ url_for('payment_history') }}" method="GET">
+            <div class="form-group">
+                <label for="month">Select Month</label>
+                <input type="month" class="form-control" id="month" name="month" value="{{ selected_month }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Filter by Month</button>
+        </form>
+
+        <hr>
+
+        <!-- Display filtered payment records -->
+        {% if payment_records %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Payment Date</th>
+                    <th>Payment Method</th>
+                    <th>Payment Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in payment_records %}
+                <tr>
+                    <td>{{ record.user.name }}</td>
+                    <td>{{ record.payment_date }}</td>
+                    <td>{{ record.payment_method }}</td>
+                    <td>{{ record.payment_amount }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No payment records found for the selected month.</p>
+        {% endif %}
+
+        <hr>
+
+        <!-- Back to Dashboard Button -->
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Gym Management System by Yabkal Yishak (Mr. Suvo). All rights reserved.</p>
+        <p>Content and images may not be reused without permission.</p>
+    </footer>
+</body>
+</html>

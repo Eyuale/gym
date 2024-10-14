@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Gym Management Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background-color: #FFDC7F;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        h1, h2 {
+            /* color: #343a40; */
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .container {
+            margin-top: 40px;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background-color: #227B94;
+            color: #FFDC7F;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background-color: #16325B;
+            border-color: #007bff;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .modal-header {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-sm {
+            border-radius: 50px;
+        }
+
+        .search-bar input {
+            border-radius: 20px;
+            padding: 10px;
+        }
+
+        .list-group-item {
+            border-radius: 10px;
+        }
+
+        .badge-success, .badge-danger {
+            font-size: 14px;
+            padding: 5px 10px;
+        }
+
+        table thead {
+            /* background-color: #343a40; */
+            background-color: #227B94;
+            color: white;
+        }
+
+        table tbody tr:hover {
+            background-color: #e9ecef;
+        }
+
+        .footer {
+            background-color: #343a40;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.9em;
+            position: relative;
+            width: 100%;
+        }
+
+        .footer p {
+            margin: 0;
+        }
+
+        @media (max-width: 600px) {
+            footer {
+                font-size: 0.8em;
+            }
+
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- Title -->
+        <h1 class="text-center mb-4">Gym Management Dashboard</h1>
+
+        <!-- Navigation Buttons -->
+        <div class="d-flex justify-content-center mb-4">
+            <a href="#upcomingPayments" class="btn btn-primary mx-2"><i class="fas fa-bell"></i> Upcoming Payments</a>
+            <a href="#gymUsers" class="btn btn-primary mx-2"><i class="fas fa-users"></i> Gym Users</a>
+            <a href="#registerUser" class="btn btn-primary mx-2"><i class="fas fa-user-plus"></i> Register New User</a>
+            <a href="#attendanceRecords" class="btn btn-primary mx-2"><i class="fas fa-calendar-check"></i> Today's Attendance</a>
+            <a href="#paymentHistory" class="btn btn-primary mx-2"><i class="fas fa-money-check-alt"></i> Payment History</a>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- User Search Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Search Users</h2>
+            </div>
+            <div class="card-body search-bar">
+                <input type="text" id="userSearch" class="form-control" placeholder="Search by name or phone..." onkeyup="searchUsers()">
+            </div>
+        </div>
+
+        <!-- Upcoming Payments Section -->
+        <div class="card mb-4">
+            <div class="card-header" id="upcomingPayments">
+                <h2>Upcoming Payments</h2>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('update_sms_status') }}" method="POST">
+                    <ul class="list-group mb-4">
+                        {% for user in upcoming_payments %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <input type="hidden" name="user_ids" value="{{ user.user_id }}">
+                                <input type="checkbox" id="sms_sent_{{ user.user_id }}" name="sms_sent_{{ user.user_id }}" value="true" {% if user.sms_sent %}checked{% endif %}>
+                                <label for="sms_sent_{{ user.user_id }}">{{ user.name }} - Due Date: {{ user.due_date }}</label>
+                            </div>
+                            <div>
+                                {% if user.sms_sent %}
+                                <span class="badge badge-success">SMS Sent</span>
+                                {% else %}
+                                <span class="badge badge-danger">SMS not Sent</span>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <button type="submit" class="btn btn-primary">Update SMS Status</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Gym Users Section -->
+        <div class="card mb-4">
+            <div class="card-header" id="gymUsers">
+                <h2>Gym Users</h2>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped table-bordered" id="gymUsersTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Package Type</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in gym_users %}
+                        <tr>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.phone }}</td>
+                            <td>{{ user.package_type }}</td>
+                            <td>{{ user.due_date }}</td>
+                            <td>{{ user.status }}</td>
+                            <td>
+                                <!-- Mark Attendance Button -->
+                                <form method="POST" action="{{ url_for('mark_attendance') }}" style="display:inline;">
+                                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                                    <button type="submit" class="btn btn-success btn-sm">Mark Attendance</button>
+                                </form>
+                                <!-- Update User Button -->
+                                <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#updateUserModal{{ user.id }}">Update</button>
+                                <!-- Renew Membership Button -->
+                                <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#renewUserModal{{ user.id }}">Renew</button>
+                                <!-- Delete User Button -->
+                                <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+
+                        <!-- Update User Modal -->
+                        <div class="modal fade" id="updateUserModal{{ user.id }}" tabindex="-1" role="dialog">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Update User</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <form method="POST" action="{{ url_for('update_user', user_id=user.id) }}">
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label for="name">Name</label>
+                                                <input type="text" class="form-control" name="name" value="{{ user.name }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="phone">Phone</label>
+                                                <input type="text" class="form-control" name="phone" value="{{ user.phone }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="package_type">Package Type</label>
+                                                <input type="text" class="form-control" name="package_type" value="{{ user.package_type }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="due_date">Due Date</label>
+                                                <input type="date" class="form-control" name="due_date" value="{{ user.due_date }}" required>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                            <button type="submit" class="btn btn-primary">Update User</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Renew User Modal -->
+                        <div class="modal fade" id="renewUserModal{{ user.id }}" tabindex="-1" role="dialog">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Renew Membership</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <form method="POST" action="{{ url_for('renew_user', user_id=user.id) }}">
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label for="renew_date">New Due Date</label>
+                                                <input type="date" class="form-control" name="renew_date" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="payment_amount">Payment Amount</label>
+                                                <input type="number" class="form-control" name="payment_amount" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="payment_method">Payment Method</label>
+                                                <select class="form-control" name="payment_method" required>
+                                                    <option value="Cash">Cash</option>
+                                                    <option value="Mobile Banking">Mobile Banking</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                            <button type="submit" class="btn btn-primary">Renew Membership</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Register New User Section -->
+        <div class="card mb-4">
+            <div class="card-header" id="registerUser">
+                <h2>Register New User</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('register_user') }}">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="text" class="form-control" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="package_type">Package Type</label>
+                        <input type="text" class="form-control" name="package_type" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="due_date">Due Date</label>
+                        <input type="date" class="form-control" name="due_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment_method">Payment Method</label>
+                        <select class="form-control" name="payment_method" required>
+                            <option value="" disabled selected>Select Payment Method</option>
+                            <option value="cash">Cash</option>
+                            <option value="mobile_banking">Mobile Payment</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment_amount">Payment Amount</label>
+                        <input type="number" class="form-control" name="payment_amount" step="0.01" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register User</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- View Attendance History Section -->
+        <div class="d-flex justify-content-center">
+            <a href="{{ url_for('attendance_history') }}" class="btn btn-secondary mb-4"><i class="fas fa-history"></i> View Full Attendance History</a>
+        </div>
+
+        <!-- Today's Attendance Section -->
+        <div class="card mb-4">
+            <div class="card-header" id="attendanceRecords">
+                <h2>Today's Attendance</h2>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped table-bordered" id="attendanceRecordsTable">
+                    <thead>
+                        <tr>
+                            <th>User Name</th>
+                            <th>Attendance Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>{{ record.user.name }}</td>
+                            <td>{{ record.attendance_date }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payment History Section -->
+        <div class="d-flex justify-content-center">
+            <a href="{{ url_for('payment_history') }}" class="btn btn-secondary mb-4"><i class="fas fa-file-invoice-dollar"></i> View Full Payment History</a>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header" id="paymentHistory">
+                <h2>Payment History</h2>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped table-bordered" id="paymentHistoryTable">
+                    <thead>
+                        <tr>
+                            <th>User Name</th>
+                            <th>Payment Date</th>
+                            <th>Amount</th>
+                            <th>Payment Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payment_history %}
+                        <tr>
+                            <td>{{ payment.user.name }}</td>
+                            <td>{{ payment.payment_date }}</td>
+                            <td>{{ payment.payment_amount }}</td>
+                            <td>{{ payment.payment_method }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>&copy; 2024 Gym Management System by Yabkal Yishak (mr suvo). All rights reserved.</p>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function searchUsers() {
+            const input = document.getElementById('userSearch');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('gymUsersTable');
+            const tr = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < tr.length; i++) {
+                const tdName = tr[i].getElementsByTagName('td')[0];
+                const tdPhone = tr[i].getElementsByTagName('td')[1];
+                if (tdName || tdPhone) {
+                    const txtValueName = tdName.textContent || tdName.innerText;
+                    const txtValuePhone = tdPhone.textContent || tdPhone.innerText;
+                    if (txtValueName.toLowerCase().indexOf(filter) > -1 || txtValuePhone.toLowerCase().indexOf(filter) > -1) {
+                        tr[i].style.display = '';
+                    } else {
+                        tr[i].style.display = 'none';
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
